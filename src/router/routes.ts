@@ -53,7 +53,7 @@ baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response)
         const queryTotal = `
             SELECT SUM(montant) AS montant_total
             FROM Cotisation
-            WHERE mode_paiement IN ('Mvola', 'Orange Money', 'En liquide');
+            WHERE mode_paiement <> 'Autres';
         `;
 
         const [rows] = await pool.query(query);
