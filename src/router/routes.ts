@@ -136,7 +136,6 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
     } catch (_error: any) {
-        console.log(_error);
         res.status(400).send({ error: MESSAGE_400 });
     }
 });
