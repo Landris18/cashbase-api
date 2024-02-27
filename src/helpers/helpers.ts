@@ -11,6 +11,12 @@ const MONTH_YEAR_REGEX = new RegExp(
     `^(Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre)\\s(${new Date().getFullYear()}|${new Date().getFullYear() + 1})$`
 );
 
+
+/**
+ * 
+ * @Notes: Functions for token manipulation
+*/
+
 export const generateTokenJWT = (user: any): string => {
     const payload = {
         id: user.id,
@@ -18,11 +24,11 @@ export const generateTokenJWT = (user: any): string => {
         is_admin: user.is_admin
     };
     const options = {
-        expiresIn: '24h'
+        expiresIn: '48h'
     };
     const token = jwt.sign(payload, process.env.SECRET_KEY as string, options);
     return token
-}
+};
 
 export const verifyToken = (req: any, res: Response, next: () => void) => {
     const bearerHeader = req.headers['authorization'];
@@ -43,6 +49,12 @@ export const verifyToken = (req: any, res: Response, next: () => void) => {
         res.status(401).json({ error: 'Unauthorized' });
     }
 };
+
+
+/**
+ * 
+ * @Notes: Utils functions used in router or controller
+*/
 
 export const hashPassword = (password: string): string => {
     const iterations = 100000;
@@ -66,16 +78,6 @@ export const getMonthFilter = (): any => {
     return { moisFilter: mois, anneeFilter: (new Date().getFullYear() - minus) };
 };
 
-export const capitalizeFirstLetter = (string: string): string => {
-    return string.charAt(0).toUpperCase() + string.slice(1);
-};
-
-export const monthsList = Array.from({ length: 12 }, (_, index) => {
-    const formatter = new Intl.DateTimeFormat(FR_LOCALE, MONTH_OPTIONS);
-    const date = new Date(2000, index, 1);
-    return capitalizeFirstLetter(formatter.format(date));
-});
-
 export const checkMonthYear = (dataMoisAnnee: string) => {
     var list_mois_annee: any[] = [];
     dataMoisAnnee = dataMoisAnnee.trim();
@@ -86,18 +88,18 @@ export const checkMonthYear = (dataMoisAnnee: string) => {
                 const mois = mois_annee.trim().split(" ")[0].trim();
                 const annee = mois_annee.trim().split(" ")[1].trim();
                 if (!monthsList.includes(mois)) {
-                    return { status: false, message: `Le mois ${mois} n'est pas dans la liste des mois Français.` };
+                    return { validData: false, dataMessage: `Le mois ${mois} n'est pas dans la liste des mois Français.` };
                 }
                 if (![new Date().getFullYear(), new Date().getFullYear() + 1].includes(parseInt(annee))) {
-                    return { status: false, message: `L'année ${annee} n'est pas entre ${new Date().getFullYear()} et ${new Date().getFullYear() + 1}.` };
+                    return { validData: false, dataMessage: `L'année ${annee} n'est pas entre ${new Date().getFullYear()} et ${new Date().getFullYear() + 1}.` };
                 }
                 list_mois_annee.push({ mois: mois, annee: annee });
             }
         }
     }
     return {
-        status: list_mois_annee.length > 0 ? true : false,
-        message: list_mois_annee.length > 0 ? list_mois_annee : "Pas de mois/année"
+        validData: list_mois_annee.length > 0,
+        dataMessage: list_mois_annee.length > 0 ? list_mois_annee : "Pas de mois/année"
     }
 };
 
@@ -106,6 +108,22 @@ export const checkCoherence = (montant: number, lenDataMois: number) => {
     const coherence = montant === expectedMontant;
     return {
         coherence: coherence,
-        messageCoherence: coherence ? "" : "Incohérence entre le montant et le nombre des mois"
+        messageCoherence: coherence ? `` : "Incohérence entre le montant et le nombre des mois"
     }
 };
+
+
+/**
+ * 
+ * @Notes: Functions used locally in helpers
+*/
+
+const capitalizeFirstLetter = (string: string): string => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+};
+
+const monthsList = Array.from({ length: 12 }, (_, index) => {
+    const formatter = new Intl.DateTimeFormat(FR_LOCALE, MONTH_OPTIONS);
+    const date = new Date(2000, index, 1);
+    return capitalizeFirstLetter(formatter.format(date));
+});
