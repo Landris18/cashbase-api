@@ -9,7 +9,7 @@ const baseRouter = Router();
 
 
 baseRouter.get("/", async (_req: Request, res: Response) => {
-    res.send("Cashbase is running...");
+    res.send("Cashbase-api is running...");
 });
 
 baseRouter.post("/login", async (_req: Request, res: Response) => {
@@ -117,13 +117,26 @@ baseRouter.post("/add_dette", verifyToken, async (_req: Request, res: Response) 
     }
 });
 
-baseRouter.put("/paye_dette", verifyToken, async (_req: Request, res: Response) => {
+baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response) => {
     try {
-        const id = _req.query.id;
-        const query = `UPDATE Dette SET is_paye = 1 WHERE id = ${id};`;
+        const { id, montant, raison, debiteur, is_paye } = req.body;
+
+        const setClauses = [];
+        if (montant && montant !== "") setClauses.push(`montant = '${montant}'`);
+        if (raison && raison !== "") setClauses.push(`raison = '${raison}'`);
+        if (debiteur && debiteur !== "") setClauses.push(`debiteur = '${debiteur}'`);
+        if (is_paye && is_paye !== "") setClauses.push(`is_paye = ${is_paye}`);
+
+        const query = `
+            UPDATE Dette
+            SET ${setClauses.join(', ')}
+            WHERE id = ${id};
+        `;
+
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
     } catch (_error: any) {
+        console.log(_error);
         res.status(400).send({ error: MESSAGE_400 });
     }
 });
