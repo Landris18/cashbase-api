@@ -15,7 +15,7 @@ baseRouter.get("/", async (_req: Request, res: Response) => {
 baseRouter.post("/login", async (_req: Request, res: Response) => {
     try {
         const query = `
-            SELECT id, username, is_admin FROM Membre WHERE username='${_req.body.username}' AND password='${hashPassword(_req.body.password)}';
+            SELECT id, username, is_admin, avatar FROM Membre WHERE username='${_req.body.username}' AND password='${hashPassword(_req.body.password)}';
         `;
         const [rows] = await pool.query(query);
         if (Array.isArray(rows) && rows.length > 0) {
@@ -75,12 +75,24 @@ baseRouter.post("/add_cotisations", verifyToken, async (_req: Request, res: Resp
     }
 });
 
+baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const query = `
+            SELECT id, username, is_admin, avatar FROM Membre WHERE id='${_req.params.id}';
+        `;
+        const [rows] = await pool.query(query);
+        res.status(200).send({ success: rows });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
 baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response) => {
     try {
         const query = `
             INSERT INTO Membre(username, password, is_admin) 
             VALUES('${_req.body.username}', '${hashPassword(_req.body.password)}', ${_req.body.is_admin});
-        `
+        `;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
     } catch (_error: any) {
