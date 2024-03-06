@@ -1,6 +1,6 @@
 import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
-import { generateTokenJWT, getMonthFilter, hashPassword, verifyToken } from '../helpers/helpers';
+import { fillMissingMonths, generateTokenJWT, getMonthFilter, hashPassword, verifyToken } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 
 
@@ -147,6 +147,77 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
 
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+baseRouter.get("/get_stats", verifyToken, async (req: Request, res: Response) => {
+    try {
+        const annee = req.query.annee || new Date().getFullYear();
+
+        const queryDette = `
+            SELECT
+                MONTH(date) AS mois,
+                COALESCE(SUM(totalMontantDette), 0) - COALESCE(SUM(totalMontantPaiement), 0) AS totalMontant
+            FROM (
+                SELECT date_creation AS date, montant AS totalMontantDette, 0 AS totalMontantPaiement
+                FROM Dette
+                WHERE YEAR(date_creation) = 2024
+                UNION ALL
+                SELECT DP.date_creation, 0 AS totalMontantDette, COALESCE(SUM(DP.montant), 0) AS totalMontantPaiement
+                FROM Depense DP
+                LEFT JOIN Dette D ON DP.dette_id = D.id
+                WHERE YEAR(D.date_creation) = ${annee}
+                GROUP BY DP.date_creation
+            ) AS combined_data
+            GROUP BY YEAR(date), MONTH(date)
+            ORDER BY YEAR(date), MONTH(date);
+        `;
+
+        const queryDepense = `
+            SELECT 
+                MONTH(date_creation) AS mois,
+                COALESCE(SUM(montant), 0) AS totalMontant
+            FROM Depense
+            WHERE YEAR(date_creation) = ${annee}
+            GROUP BY YEAR(date_creation), MONTH(date_creation)
+            ORDER BY YEAR(date_creation), MONTH(date_creation);
+        `;
+
+        const queryCotisation = `
+            SELECT 
+                MONTH(date_paiement) AS mois,
+                COALESCE(SUM(montant), 0) AS totalMontant
+            FROM Cotisation
+            WHERE YEAR(date_paiement) = ${annee}
+            GROUP BY YEAR(date_paiement), MONTH(date_paiement)
+            ORDER BY YEAR(date_paiement), MONTH(date_paiement);
+        `;
+
+        const queryRevenu = `
+            SELECT 
+                MONTH(date_creation) AS mois,
+                COALESCE(SUM(montant), 0) AS totalMontant
+            FROM Revenu
+            WHERE YEAR(date_creation) = ${annee}
+            GROUP BY YEAR(date_creation), MONTH(date_creation)
+            ORDER BY YEAR(date_creation), MONTH(date_creation);
+        `;
+
+        const [rowsDette] = await pool.query(queryDette);
+        const [rowsDepense] = await pool.query(queryDepense);
+        const [rowsCotisation] = await pool.query(queryCotisation);
+        const [rowsRevenu] = await pool.query(queryRevenu);
+
+        res.status(200).send({
+            success: fillMissingMonths({
+                dettes: rowsDette,
+                depenses: rowsDepense,
+                cotisations: rowsCotisation,
+                revenus: rowsRevenu
+            })
+        });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }

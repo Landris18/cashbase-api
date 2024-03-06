@@ -11,6 +11,17 @@ const MONTH_YEAR_REGEX = new RegExp(
     `^(Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre)\\s(${new Date().getFullYear()}|${new Date().getFullYear() + 1})$`
 );
 
+interface MontantItem {
+    mois: number;
+    totalMontant: number;
+}
+
+interface ResultObject {
+    dettes: MontantItem[];
+    depenses: MontantItem[];
+    cotisations: MontantItem[];
+    revenus: MontantItem[];
+}
 
 /**
  * 
@@ -112,6 +123,56 @@ export const checkCoherence = (montant: number, lenDataMois: number) => {
     }
 };
 
+export const fillMissingMonths = (data: any): ResultObject => {
+    const result: ResultObject = {
+        dettes: [],
+        depenses: [],
+        cotisations: [],
+        revenus: []
+    };
+
+    const { dettes, depenses, cotisations, revenus } = data;
+
+    const allMonths = [...dettes, ...depenses, ...cotisations, ...revenus].map((item) => item.mois);
+    const minMonth = Math.min(...allMonths);
+    const maxMonth = Math.max(...allMonths);
+
+    for (let i = minMonth; i <= maxMonth; i++) {
+        const dettesForMonth = dettes.find((item: MontantItem) => item.mois === i);
+        result.dettes.push({
+            mois: i,
+            totalMontant: dettesForMonth ? parseInt(dettesForMonth.totalMontant) : 0
+        });
+    }
+
+    for (let i = minMonth; i <= maxMonth; i++) {
+        const depensesForMonth = depenses.find((item: MontantItem) => item.mois === i);
+        result.depenses.push({
+            mois: i,
+            totalMontant: depensesForMonth ? parseInt(depensesForMonth.totalMontant) : 0
+        });
+    }
+
+    for (let i = minMonth; i <= maxMonth; i++) {
+        const cotisationsForMonth = cotisations.find((item: MontantItem) => item.mois === i);
+        result.cotisations.push({
+            mois: i,
+            totalMontant: cotisationsForMonth ? parseInt(cotisationsForMonth.totalMontant) : 0
+        });
+    }
+
+    for (let i = minMonth; i <= maxMonth; i++) {
+        const revenusForMonth = revenus.find((item: MontantItem) => item.mois === i);
+        result.revenus.push({
+            mois: i,
+            totalMontant: revenusForMonth ? parseInt(revenusForMonth.totalMontant) : 0
+        });
+    }
+
+    result.dettes = accumulateDette(result.dettes);
+    return result;
+}
+
 
 /**
  * 
@@ -127,3 +188,15 @@ const monthsList = Array.from({ length: 12 }, (_, index) => {
     const date = new Date(2000, index, 1);
     return capitalizeFirstLetter(formatter.format(date));
 });
+
+const accumulateDette = (dettes: any) => {
+    let accumulatedTotalMontant = 0;
+    const modifiedDettesList = dettes.map((item: any) => {
+        accumulatedTotalMontant += item.totalMontant;
+        return {
+            mois: item.mois,
+            totalMontant: accumulatedTotalMontant
+        };
+    });
+    return modifiedDettesList;
+};
