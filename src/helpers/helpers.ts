@@ -135,7 +135,7 @@ export const fillMissingMonths = (data: any): ResultObject => {
 
     const allMonths = [...dettes, ...depenses, ...cotisations, ...revenus].map((item) => item.mois);
     const minMonth = Math.min(...allMonths);
-    const maxMonth = Math.max(...allMonths);
+    const maxMonth = new Date().getMonth() + 1;
 
     for (let i = minMonth; i <= maxMonth; i++) {
         const dettesForMonth = dettes.find((item: MontantItem) => item.mois === i);
@@ -173,6 +173,38 @@ export const fillMissingMonths = (data: any): ResultObject => {
     return result;
 }
 
+export const addRevenusTotalsAndSoldesReel = (data: any) => {
+    const cotisationsArray = data.cotisations;
+    const revenusArray = data.revenus;
+    const depensesArray = data.depenses;
+    const dettesArray = data.dettes;
+
+    const revenusTotalArray = cotisationsArray.map((cotisation: any) => {
+        const mois = cotisation.mois;
+        const cotisationTotal = cotisation.totalMontant;
+        const revenusTotal = revenusArray.find((revenu: any) => revenu.mois === mois)?.totalMontant || 0;
+
+        return {
+            mois,
+            totalMontant: cotisationTotal + revenusTotal
+        };
+    });
+    data.revenus_total = revenusTotalArray;
+
+    const soldesReelArray = revenusTotalArray.map((revenusTotal: any) => {
+        const mois = revenusTotal.mois;
+        const depenses = depensesArray.find((depense: any) => depense.mois === mois)?.totalMontant || 0;
+        const dettes = dettesArray.find((dette: any) => dette.mois === mois)?.totalMontant || 0;
+
+        return {
+            mois,
+            totalMontant: revenusTotal.totalMontant - depenses - dettes
+        };
+    });
+    data.soldes_reel = soldesReelArray;
+
+    return data;
+}
 
 /**
  * 

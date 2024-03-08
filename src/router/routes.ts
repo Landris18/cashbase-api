@@ -1,6 +1,9 @@
 import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
-import { fillMissingMonths, generateTokenJWT, getMonthFilter, hashPassword, verifyToken } from '../helpers/helpers';
+import {
+    verifyToken, hashPassword, getMonthFilter,
+    generateTokenJWT, fillMissingMonths, addRevenusTotalsAndSoldesReel
+} from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 
 
@@ -50,16 +53,9 @@ baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response)
             ${paidOnly ? "WHERE" : "AND"} Cotisation.mois = '${mois}' AND Cotisation.annee = '${annee}';
         `;
 
-        const queryTotal = `
-            SELECT SUM(montant) AS montant_total
-            FROM Cotisation
-            WHERE mode_paiement <> 'Autres';
-        `;
-
         const [rows] = await pool.query(query);
-        const [rowsTotal] = await pool.query(queryTotal) as any;
         res.status(200).send(
-            { success: { cotisations: rows, montant_total: rowsTotal[0].montant_total } }
+            { success: { cotisations: rows } }
         );
     } catch (_error: any) {
         res.status(400).send({ error: _error });
@@ -80,8 +76,10 @@ baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) 
         const query = `
             SELECT id, username, is_admin, avatar FROM Membre WHERE id='${_req.params.id}';
         `;
-        const [rows] = await pool.query(query);
-        res.status(200).send({ success: rows });
+        const [rows] = await pool.query(query) as any;
+        const user = rows[0];
+        const token = generateTokenJWT(user);
+        res.status(200).send({ success: { user: user, token: token } });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
@@ -103,14 +101,8 @@ baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response)
 baseRouter.get("/dettes", verifyToken, async (_req: Request, res: Response) => {
     try {
         const query = `SELECT * FROM Dette;`
-        const queryTotal = `            
-            SELECT SUM(montant) AS montant_total
-            FROM Dette;
-        `;
-
         const [rows] = await pool.query(query);
-        const [rowsTotal] = await pool.query(queryTotal) as any;
-        res.status(200).send({ success: { dettes: rows, montant_total: rowsTotal[0].montant_total } });
+        res.status(200).send({ success: { dettes: rows } });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
@@ -211,13 +203,67 @@ baseRouter.get("/get_stats", verifyToken, async (req: Request, res: Response) =>
         const [rowsRevenu] = await pool.query(queryRevenu);
 
         res.status(200).send({
-            success: fillMissingMonths({
-                dettes: rowsDette,
-                depenses: rowsDepense,
-                cotisations: rowsCotisation,
-                revenus: rowsRevenu
-            })
+            success: addRevenusTotalsAndSoldesReel(
+                fillMissingMonths({
+                    dettes: rowsDette,
+                    depenses: rowsDepense,
+                    cotisations: rowsCotisation,
+                    revenus: rowsRevenu
+                })
+            )
         });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+baseRouter.get("/get_totals", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const queryTotalDette = `            
+            SELECT SUM(montant) AS montant_total
+            FROM Dette
+            WHERE is_paye = 0;
+        `;
+        const queryTotalCotisation = `
+            SELECT SUM(montant) AS montant_total
+            FROM Cotisation;
+        `;
+        const queryTotalDepense = `
+            SELECT SUM(montant) AS montant_total
+            FROM Depense;
+        `;
+        const queryTotalRevenu = `
+            SELECT SUM(montant) AS montant_total
+            FROM Revenu;
+        `;
+
+        const [rowsDette] = await pool.query(queryTotalDette) as any;
+        const [rowsDepense] = await pool.query(queryTotalDepense) as any;
+        const [rowsRevenu] = await pool.query(queryTotalRevenu) as any;
+        const [rowsCotisation] = await pool.query(queryTotalCotisation) as any;
+
+        const total_dettes = rowsDette[0].montant_total ? parseInt(rowsDette[0].montant_total) : 0;
+        const total_cotisations = rowsCotisation[0].montant_total ? parseInt(rowsCotisation[0].montant_total) : 0;
+        const total_depenses = rowsDepense[0].montant_total ? parseInt(rowsDepense[0].montant_total) : 0;
+        const total_revenus = rowsRevenu[0].montant_total ? parseInt(rowsRevenu[0].montant_total) : 0;
+        const total_revenus_total = total_revenus + total_cotisations;
+        const total_soldes = total_revenus + total_cotisations - total_depenses;
+        const total_soldes_reel = total_revenus + total_cotisations - total_depenses - total_dettes;
+
+        res.status(200).send(
+            {
+                success:
+                {
+                    total_dettes: total_dettes,
+                    total_cotisations: total_cotisations,
+                    total_depenses: total_depenses,
+                    total_revenus: total_revenus,
+                    total_revenus_total: total_revenus_total,
+                    total_soldes: total_soldes,
+                    total_soldes_reel: total_soldes_reel
+                }
+            }
+        );
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
