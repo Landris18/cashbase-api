@@ -155,7 +155,7 @@ baseRouter.get("/get_stats", verifyToken, async (req: Request, res: Response) =>
             FROM (
                 SELECT date_creation AS date, montant AS totalMontantDette, 0 AS totalMontantPaiement
                 FROM Dette
-                WHERE YEAR(date_creation) = 2024
+                WHERE YEAR(date_creation) = ${annee}
                 UNION ALL
                 SELECT DP.date_creation, 0 AS totalMontantDette, COALESCE(SUM(DP.montant), 0) AS totalMontantPaiement
                 FROM Depense DP
