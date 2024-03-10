@@ -11,10 +11,18 @@ const MESSAGE_400 = "Oups, une erreur s'est produite. Veuillez contacter Landry 
 const baseRouter = Router();
 
 
+/**
+ * 
+ * @Notes: Endpoint for route
+*/
 baseRouter.get("/", async (_req: Request, res: Response) => {
     res.send("Cashbase-api is running...");
 });
 
+/**
+ * 
+ * @Notes: Endpoint for login
+*/
 baseRouter.post("/login", async (_req: Request, res: Response) => {
     try {
         const query = `
@@ -33,12 +41,16 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
     }
 });
 
+/**
+ * 
+ * @Notes: Endpoints for cotisations
+*/
 baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response) => {
     try {
         const { moisFilter, anneeFilter } = getMonthFilter();
         const mois = _req.query.mois || moisFilter;
         const annee = _req.query.annee || anneeFilter;
-        const paidOnly = _req.query.paidOnly || false;
+        const only_paid = _req.query.only_paid || false;
 
         const query = `
             SELECT 
@@ -50,15 +62,13 @@ baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response)
                 Cotisation.mode_paiement
             FROM Membre
             LEFT JOIN Cotisation ON Membre.id = Cotisation.membre_id 
-            ${paidOnly ? "WHERE" : "AND"} Cotisation.mois = '${mois}' AND Cotisation.annee = '${annee}';
+            ${only_paid ? "WHERE" : "AND"} Cotisation.mois = '${mois}' AND Cotisation.annee = '${annee}';
         `;
 
         const [rows] = await pool.query(query);
-        res.status(200).send(
-            { success: { cotisations: rows } }
-        );
+        res.status(200).send({ success: { cotisations: rows } });
     } catch (_error: any) {
-        res.status(400).send({ error: _error });
+        res.status(400).send({ error: MESSAGE_400 });
     }
 });
 
@@ -71,6 +81,49 @@ baseRouter.post("/add_cotisations", verifyToken, async (_req: Request, res: Resp
     }
 });
 
+/**
+ * 
+ * @Notes: Endpoints for revenus
+*/
+baseRouter.get("/revenus", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const annee = _req.query.annee || new Date().getFullYear();
+
+        const query = `
+            SELECT * FROM Revenu WHERE YEAR(date_creation) = ${annee};
+        `;
+
+        const [rows] = await pool.query(query);
+        res.status(200).send({ success: { revenus: rows } });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+/**
+ * 
+ * @Notes: Endpoints for depenses
+*/
+baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const annee = _req.query.annee || new Date().getFullYear();
+        const for_dette = _req.query.for_dette || false;
+
+        const query = `
+            SELECT * FROM Depense WHERE YEAR(date_creation) = ${annee} ${for_dette ? "AND dette_id IS NOT NULL" : ""};
+        `;
+
+        const [rows] = await pool.query(query);
+        res.status(200).send({ success: { revenus: rows } });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+/**
+ * 
+ * @Notes: Endpoints for membres
+*/
 baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) => {
     try {
         const query = `
@@ -98,6 +151,10 @@ baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response)
     }
 });
 
+/**
+ * 
+ * @Notes: Endpoints for dettes
+*/
 baseRouter.get("/dettes", verifyToken, async (_req: Request, res: Response) => {
     try {
         const query = `SELECT * FROM Dette;`
@@ -144,6 +201,10 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
     }
 });
 
+/**
+ * 
+ * @Notes: Endpoints for stats and totals
+*/
 baseRouter.get("/get_stats", verifyToken, async (req: Request, res: Response) => {
     try {
         const annee = req.query.annee || new Date().getFullYear();
