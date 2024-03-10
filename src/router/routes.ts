@@ -62,7 +62,8 @@ baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response)
                 Cotisation.mode_paiement
             FROM Membre
             LEFT JOIN Cotisation ON Membre.id = Cotisation.membre_id 
-            ${only_paid ? "WHERE" : "AND"} Cotisation.mois = '${mois}' AND Cotisation.annee = '${annee}';
+            ${JSON.parse(only_paid as any) === true ? "WHERE" : "AND"} Cotisation.mois = '${mois}' AND Cotisation.annee = ${annee}
+            ORDER BY Cotisation.date_paiement ASC;
         `;
 
         const [rows] = await pool.query(query);
@@ -90,7 +91,7 @@ baseRouter.get("/revenus", verifyToken, async (_req: Request, res: Response) => 
         const annee = _req.query.annee || new Date().getFullYear();
 
         const query = `
-            SELECT * FROM Revenu WHERE YEAR(date_creation) = ${annee};
+            SELECT * FROM Revenu WHERE YEAR(date_creation) = ${annee} ORDER BY date_creation DESC;
         `;
 
         const [rows] = await pool.query(query);
@@ -107,10 +108,11 @@ baseRouter.get("/revenus", verifyToken, async (_req: Request, res: Response) => 
 baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) => {
     try {
         const annee = _req.query.annee || new Date().getFullYear();
-        const for_dette = _req.query.for_dette || false;
+        const for_dette: any = _req.query.for_dette || false;
 
         const query = `
-            SELECT * FROM Depense WHERE YEAR(date_creation) = ${annee} ${for_dette ? "AND dette_id IS NOT NULL" : ""};
+            SELECT * FROM Depense WHERE YEAR(date_creation) = ${annee} ${JSON.parse(for_dette as any) === true ? "AND dette_id IS NOT NULL" : ""}
+            ORDER BY date_creation DESC;
         `;
 
         const [rows] = await pool.query(query);
@@ -122,42 +124,13 @@ baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) =>
 
 /**
  * 
- * @Notes: Endpoints for membres
-*/
-baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) => {
-    try {
-        const query = `
-            SELECT id, username, is_admin, avatar FROM Membre WHERE id='${_req.params.id}';
-        `;
-        const [rows] = await pool.query(query) as any;
-        const user = rows[0];
-        const token = generateTokenJWT(user);
-        res.status(200).send({ success: { user: user, token: token } });
-    } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
-    }
-});
-
-baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response) => {
-    try {
-        const query = `
-            INSERT INTO Membre(username, password, is_admin) 
-            VALUES('${_req.body.username}', '${hashPassword(_req.body.password)}', ${_req.body.is_admin});
-        `;
-        const [rows] = await pool.query(query);
-        res.status(200).send({ success: rows });
-    } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
-    }
-});
-
-/**
- * 
  * @Notes: Endpoints for dettes
 */
 baseRouter.get("/dettes", verifyToken, async (_req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM Dette;`
+        const annee = _req.query.annee || new Date().getFullYear();
+
+        const query = `SELECT * FROM Dette WHERE YEAR(date_creation) = ${annee} ORDER BY date_creation DESC;`;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: { dettes: rows } });
     } catch (_error: any) {
@@ -194,6 +167,37 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
             WHERE id = ${id};
         `;
 
+        const [rows] = await pool.query(query);
+        res.status(200).send({ success: rows });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+/**
+ * 
+ * @Notes: Endpoints for membres
+*/
+baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const query = `
+            SELECT id, username, is_admin, avatar FROM Membre WHERE id='${_req.params.id}';
+        `;
+        const [rows] = await pool.query(query) as any;
+        const user = rows[0];
+        const token = generateTokenJWT(user);
+        res.status(200).send({ success: { user: user, token: token } });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const query = `
+            INSERT INTO Membre(username, password, is_admin) 
+            VALUES('${_req.body.username}', '${hashPassword(_req.body.password)}', ${_req.body.is_admin});
+        `;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
     } catch (_error: any) {
