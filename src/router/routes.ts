@@ -178,6 +178,18 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
  * 
  * @Notes: Endpoints for membres
 */
+baseRouter.get("/membres", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const query = `
+            SELECT id, username, is_admin, avatar FROM Membre ORDER BY username;
+        `;
+        const [rows] = await pool.query(query);
+        res.status(200).send({ success: rows });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
 baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) => {
     try {
         const query = `
