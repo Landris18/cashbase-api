@@ -27,7 +27,7 @@ COPY package*.json ./
 RUN yarn install
 
 # Copy the .env file to the working directory
-COPY .env ./
+# COPY .env ./
 
 # Copy application code
 COPY --link . .
