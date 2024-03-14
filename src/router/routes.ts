@@ -116,7 +116,7 @@ baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) =>
         `;
 
         const [rows] = await pool.query(query);
-        res.status(200).send({ success: { revenus: rows } });
+        res.status(200).send({ success: { depenses: rows } });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
@@ -327,20 +327,17 @@ baseRouter.get("/get_totals", verifyToken, async (_req: Request, res: Response) 
         const total_soldes = total_revenus + total_cotisations - total_depenses;
         const total_soldes_reel = total_revenus + total_cotisations - total_depenses - total_dettes;
 
-        res.status(200).send(
-            {
-                success:
-                {
-                    total_dettes: total_dettes,
-                    total_cotisations: total_cotisations,
-                    total_depenses: total_depenses,
-                    total_revenus: total_revenus,
-                    total_revenus_total: total_revenus_total,
-                    total_soldes: total_soldes,
-                    total_soldes_reel: total_soldes_reel
-                }
+        res.status(200).send({
+            success: {
+                total_dettes: total_dettes,
+                total_cotisations: total_cotisations,
+                total_depenses: total_depenses,
+                total_revenus: total_revenus,
+                total_revenus_total: total_revenus_total,
+                total_soldes: total_soldes,
+                total_soldes_reel: total_soldes_reel
             }
-        );
+        });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
