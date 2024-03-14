@@ -11,6 +11,10 @@ const MONTH_YEAR_REGEX = new RegExp(
     `^(Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre)\\s(${new Date().getFullYear()}|${new Date().getFullYear() + 1})$`
 );
 
+export const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+];
+
 interface MontantItem {
     mois: number;
     totalMontant: number;
@@ -204,6 +208,11 @@ export const addRevenusTotalsAndSoldesReel = (data: any) => {
     data.soldes_reel = soldesReelArray;
 
     return data;
+}
+
+export const getMonthNumber = (monthFrenchString: string): number | null => {
+    const index: number = MONTHS.findIndex(item => item === monthFrenchString);
+    return index >= 0 ? index + 1 : null;
 }
 
 /**

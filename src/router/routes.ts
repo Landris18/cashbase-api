@@ -1,7 +1,7 @@
 import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
-    verifyToken, hashPassword, getMonthFilter,
+    verifyToken, hashPassword, getMonthFilter, getMonthNumber,
     generateTokenJWT, fillMissingMonths, addRevenusTotalsAndSoldesReel
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
@@ -89,9 +89,10 @@ baseRouter.post("/add_cotisations", verifyToken, async (_req: Request, res: Resp
 baseRouter.get("/revenus", verifyToken, async (_req: Request, res: Response) => {
     try {
         const annee = _req.query.annee || new Date().getFullYear();
+        const mois = getMonthNumber(_req.query.mois as any) || new Date().getMonth() + 1;
 
         const query = `
-            SELECT * FROM Revenu WHERE YEAR(date_creation) = ${annee} ORDER BY date_creation DESC;
+            SELECT * FROM Revenu WHERE YEAR(date_creation) = ${annee} AND MONTH(date_creation) = ${mois} ORDER BY date_creation DESC;
         `;
 
         const [rows] = await pool.query(query);
@@ -108,14 +109,17 @@ baseRouter.get("/revenus", verifyToken, async (_req: Request, res: Response) => 
 baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) => {
     try {
         const annee = _req.query.annee || new Date().getFullYear();
+        const mois = getMonthNumber(_req.query.mois as any) || new Date().getMonth() + 1;
         const for_dette: any = _req.query.for_dette || false;
 
         const query = `
-            SELECT * FROM Depense WHERE YEAR(date_creation) = ${annee} ${JSON.parse(for_dette as any) === true ? "AND dette_id IS NOT NULL" : ""}
+            SELECT *
+            FROM Depense 
+            WHERE YEAR(date_creation) = ${annee} AND MONTH(date_creation) = ${mois} ${JSON.parse(for_dette as any) === true ? "AND dette_id IS NOT NULL" : ""}
             ORDER BY date_creation DESC;
         `;
 
-        const [rows] = await pool.query(query);
+        const [rows] = await pool.query(query) as any;
         res.status(200).send({ success: { depenses: rows } });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
@@ -128,9 +132,7 @@ baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) =>
 */
 baseRouter.get("/dettes", verifyToken, async (_req: Request, res: Response) => {
     try {
-        const annee = _req.query.annee || new Date().getFullYear();
-
-        const query = `SELECT * FROM Dette WHERE YEAR(date_creation) = ${annee} ORDER BY date_creation DESC;`;
+        const query = `SELECT * FROM Dette ORDER BY date_creation DESC;`;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: { dettes: rows } });
     } catch (_error: any) {
