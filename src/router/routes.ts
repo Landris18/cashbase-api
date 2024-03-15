@@ -7,7 +7,7 @@ import {
 import { addCotisation } from '../controllers/controllers';
 
 
-const MESSAGE_400 = "Oups, une erreur s'est produite. Veuillez contacter Landry Manankoraisina !";
+const MESSAGE_400 = "Oups, une erreur s'est produite !";
 const baseRouter = Router();
 
 
@@ -34,7 +34,7 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
             const token = generateTokenJWT(user);
             res.status(200).send({ success: { user: user, token: token } });
         } else {
-            res.status(401).send({ error: "Echec d'authentification !" });
+            res.status(401).send({ error: "Nom d'utilisateur ou mot de passe incorrect" });
         }
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
@@ -214,6 +214,23 @@ baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response)
         `;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+baseRouter.put("/update_password", verifyToken, async (_req: Request, res: Response) => {
+    const { id, old_password, new_password } = _req.body;
+    try {
+        const query = `
+            UPDATE Membre SET password='${hashPassword(new_password)}' WHERE id='${id}' AND password='${hashPassword(old_password)}';
+        `;
+        const [rows] = await pool.query(query) as any;
+        if (rows.affectedRows === 1) {
+            res.status(200).send({ success: "Votre mot de passe a été mis à jour" });
+        } else {
+            res.status(400).send({ error: "Impossible de trouver votre compte" });
+        }
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }

@@ -11,9 +11,7 @@ const MONTH_YEAR_REGEX = new RegExp(
     `^(Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre)\\s(${new Date().getFullYear()}|${new Date().getFullYear() + 1})$`
 );
 
-export const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-];
+const whiteListPath = ["/dettes"];
 
 interface MontantItem {
     mois: number;
@@ -26,6 +24,7 @@ interface ResultObject {
     cotisations: MontantItem[];
     revenus: MontantItem[];
 }
+
 
 /**
  * 
@@ -49,13 +48,14 @@ export const verifyToken = (req: any, res: Response, next: () => void) => {
     const bearerHeader = req.headers['authorization'];
     if (typeof bearerHeader !== 'undefined') {
         const bearerToken = bearerHeader.split(' ')[1];
-
         jwt.verify(bearerToken, process.env.SECRET_KEY as string, (err: any, decoded: any) => {
             if (err) {
                 return res.status(403).json({ error: "Bad token" });
             }
-            if ((decoded.is_admin === 0 && req.method !== "GET")) {
-                return res.status(401).json({ error: "Unauthorized" });
+            if (decoded.is_admin === 0 && req.method !== "GET") {
+                if (!whiteListPath.includes(req.route.path)) {
+                    return res.status(401).json({ error: "Unauthorized" });
+                }
             }
             req.user = decoded;
             next();
@@ -210,16 +210,6 @@ export const addRevenusTotalsAndSoldesReel = (data: any) => {
     return data;
 }
 
-export const getMonthNumber = (monthFrenchString: string): number | null => {
-    const index: number = MONTHS.findIndex(item => item === monthFrenchString);
-    return index >= 0 ? index + 1 : null;
-}
-
-/**
- * 
- * @Notes: Functions used locally in helpers
-*/
-
 const capitalizeFirstLetter = (string: string): string => {
     return string.charAt(0).toUpperCase() + string.slice(1);
 };
@@ -229,6 +219,11 @@ const monthsList = Array.from({ length: 12 }, (_, index) => {
     const date = new Date(2000, index, 1);
     return capitalizeFirstLetter(formatter.format(date));
 });
+
+export const getMonthNumber = (monthFrenchString: string): number | null => {
+    const index: number = monthsList.findIndex(item => item === monthFrenchString);
+    return index >= 0 ? index + 1 : null;
+}
 
 const accumulateDette = (dettes: any) => {
     let accumulatedTotalMontant = 0;
