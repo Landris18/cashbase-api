@@ -11,7 +11,7 @@ const MONTH_YEAR_REGEX = new RegExp(
     `^(Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre)\\s(${new Date().getFullYear()}|${new Date().getFullYear() + 1})$`
 );
 
-const whiteListPath = ["/dettes"];
+const whiteListPath = ["/update_password"];
 
 interface MontantItem {
     mois: number;
