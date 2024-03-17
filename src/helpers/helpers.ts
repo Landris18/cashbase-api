@@ -93,28 +93,26 @@ export const getMonthFilter = (): any => {
     return { moisFilter: mois, anneeFilter: (new Date().getFullYear() - minus) };
 };
 
-export const checkMonthYear = (dataMoisAnnee: string) => {
+export const checkMonthYear = (dataMoisAnnee: string[]) => {
     var list_mois_annee: any[] = [];
-    dataMoisAnnee = dataMoisAnnee.trim();
-    if (!["", null, undefined].includes(dataMoisAnnee)) {
-        const lst_mois_annee = dataMoisAnnee.split(",");
-        for (const mois_annee of lst_mois_annee) {
+    if (dataMoisAnnee.length > 0) {
+        for (const mois_annee of dataMoisAnnee) {
             if (MONTH_YEAR_REGEX.test(mois_annee.trim())) {
                 const mois = mois_annee.trim().split(" ")[0].trim();
                 const annee = mois_annee.trim().split(" ")[1].trim();
                 if (!monthsList.includes(mois)) {
-                    return { validData: false, dataMessage: `Le mois ${mois} n'est pas dans la liste des mois Français.` };
+                    return { validData: false, dataOrMessage: `Le mois ${mois} n'est pas dans la liste des mois Français.` };
                 }
                 if (![new Date().getFullYear(), new Date().getFullYear() + 1].includes(parseInt(annee))) {
-                    return { validData: false, dataMessage: `L'année ${annee} n'est pas entre ${new Date().getFullYear()} et ${new Date().getFullYear() + 1}.` };
+                    return { validData: false, dataOrMessage: `L'année ${annee} n'est pas entre ${new Date().getFullYear()} et ${new Date().getFullYear() + 1}.` };
                 }
                 list_mois_annee.push({ mois: mois, annee: annee });
             }
         }
     }
     return {
-        validData: list_mois_annee.length > 0,
-        dataMessage: list_mois_annee.length > 0 ? list_mois_annee : "Pas de mois/année"
+        isDataValid: list_mois_annee.length > 0,
+        dataOrMessage: list_mois_annee.length > 0 ? list_mois_annee : "Pas de mois/année"
     }
 };
 
