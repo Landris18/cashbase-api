@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import dotenv from 'dotenv';
 import crypto from "crypto";
 import { Response } from 'express';
+import { pool } from '../db/db';
 
 dotenv.config();
 
@@ -25,17 +26,17 @@ interface ResultObject {
     revenus: MontantItem[];
 }
 
-
 /**
  * 
  * @Notes: Functions for token manipulation
 */
 
-export const generateTokenJWT = (user: any): string => {
+export const generateJwt = (user: any): string => {
     const payload = {
         id: user.id,
         username: user.username,
-        is_admin: user.is_admin
+        is_admin: user.is_admin,
+        session_id: user.session_id
     };
     const options = {
         expiresIn: '48h'
@@ -48,15 +49,20 @@ export const verifyToken = (req: any, res: Response, next: () => void) => {
     const bearerHeader = req.headers['authorization'];
     if (typeof bearerHeader !== 'undefined') {
         const bearerToken = bearerHeader.split(' ')[1];
-        jwt.verify(bearerToken, process.env.SECRET_KEY as string, (err: any, decoded: any) => {
-            if (err) {
-                return res.status(403).json({ error: "Bad token" });
+        jwt.verify(bearerToken, process.env.SECRET_KEY as string, async (err: any, decoded: any) => {
+
+            const sessionValid = await isValidSessionId(jwt.decode(bearerToken));
+            if (err || !sessionValid) {
+                await removeSessionId(jwt.decode(bearerToken));
+                return res.status(403).json({ error: "Token expired" });
             }
+
             if (decoded.is_admin === 0 && req.method !== "GET") {
                 if (!whiteListPath.includes(req.route.path)) {
                     return res.status(401).json({ error: "Unauthorized" });
                 }
             }
+
             req.user = decoded;
             next();
         });
@@ -65,6 +71,37 @@ export const verifyToken = (req: any, res: Response, next: () => void) => {
     }
 };
 
+const isValidSessionId = async (user: any) => {
+    const query = `
+        SELECT session_ids FROM Membre WHERE id=${user?.id};
+    `;
+    const [rows] = await pool.query(query) as any;
+    const currentUserSessionIds: string = rows[0]?.session_ids;
+    console.log(currentUserSessionIds.split(","), user);
+    
+    return currentUserSessionIds.split(",").includes(user?.session_id);
+};
+
+const removeSessionId = async (user: any) => {
+    const query = `
+        SELECT session_ids FROM Membre WHERE id=${user?.id};
+    `;
+    const [rows] = await pool.query(query) as any;
+    const currentUserSessionIds: string = rows[0]?.session_ids;
+    let newUserSessionIdsList: string[] = [...currentUserSessionIds.split(",")];
+
+    const index = newUserSessionIdsList.indexOf(user?.session_id);
+    if (index !== -1) {
+        newUserSessionIdsList = newUserSessionIdsList.splice(index, 1);
+    }
+
+    const querySet = `
+        UPDATE Membre 
+        SET session_ids='${newUserSessionIdsList.join(",")}'
+        WHERE id=${user?.id};
+    `;
+    await pool.query(querySet);
+};
 
 /**
  * 

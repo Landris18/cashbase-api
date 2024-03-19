@@ -2,9 +2,10 @@ import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
     verifyToken, hashPassword, getMonthFilter, getMonthNumber,
-    generateTokenJWT, fillMissingMonths, addRevenusTotalsAndSoldesReel
+    generateJwt, fillMissingMonths, addRevenusTotalsAndSoldesReel
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const MESSAGE_400 = "Oups, une erreur s'est produite !";
@@ -21,20 +22,89 @@ baseRouter.get("/", async (_req: Request, res: Response) => {
 
 /**
  * 
- * @Notes: Endpoint for login
+ * @Notes: Endpoint for authentications
 */
 baseRouter.post("/login", async (_req: Request, res: Response) => {
     try {
         const query = `
-            SELECT id, username, is_admin, avatar FROM Membre WHERE username='${_req.body.username}' AND password='${hashPassword(_req.body.password)}';
+            SELECT id, username, is_admin, avatar, session_ids FROM Membre WHERE username='${_req.body.username}' AND password='${hashPassword(_req.body.password)}';
         `;
-        const [rows] = await pool.query(query);
+        const [rows] = await pool.query(query) as any;
         if (Array.isArray(rows) && rows.length > 0) {
             const user = rows[0];
-            const token = generateTokenJWT(user);
+            const sessionId = uuidv4();
+            const currentUserSessionIds = rows[0].session_ids;
+
+            const querySet = `
+                UPDATE Membre 
+                SET session_ids='${['', null].includes(currentUserSessionIds) ? sessionId : `${currentUserSessionIds},${sessionId}`}' 
+                WHERE id=${rows[0].id};
+            `;
+            await pool.query(querySet);
+
+            const token = generateJwt({ ...user, session_id: sessionId });
+            delete user.session_ids
             res.status(200).send({ success: { user: user, token: token } });
         } else {
             res.status(401).send({ error: "Nom d'utilisateur ou mot de passe incorrect" });
+        }
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+/**
+ * 
+ * @Notes: Endpoints for membres
+*/
+baseRouter.get("/membres", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const query = `
+            SELECT id, username, is_admin, avatar FROM Membre ORDER BY username;
+        `;
+        const [rows] = await pool.query(query);
+        res.status(200).send({ success: rows });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const query = `
+            SELECT id, username, is_admin, avatar FROM Membre WHERE id='${_req.params.id}';
+        `;
+        const [rows] = await pool.query(query) as any;
+        res.status(200).send({ success: { user: rows[0] } });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response) => {
+    try {
+        const query = `
+            INSERT INTO Membre(username, password, is_admin) 
+            VALUES('${_req.body.username}', '${hashPassword(_req.body.password)}', ${_req.body.is_admin});
+        `;
+        const [rows] = await pool.query(query);
+        res.status(200).send({ success: rows });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+baseRouter.put("/update_password", verifyToken, async (_req: Request, res: Response) => {
+    const { id, old_password, new_password } = _req.body;
+    try {
+        const query = `
+            UPDATE Membre SET password='${hashPassword(new_password)}' WHERE id='${id}' AND password='${hashPassword(old_password)}';
+        `;
+        const [rows] = await pool.query(query) as any;
+        if (rows.affectedRows === 1) {
+            res.status(200).send({ success: "Votre mot de passe a été mis à jour" });
+        } else {
+            res.status(400).send({ error: "Impossible de trouver votre compte" });
         }
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
@@ -171,66 +241,6 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
 
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
-    } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
-    }
-});
-
-/**
- * 
- * @Notes: Endpoints for membres
-*/
-baseRouter.get("/membres", verifyToken, async (_req: Request, res: Response) => {
-    try {
-        const query = `
-            SELECT id, username, is_admin, avatar FROM Membre ORDER BY username;
-        `;
-        const [rows] = await pool.query(query);
-        res.status(200).send({ success: rows });
-    } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
-    }
-});
-
-baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) => {
-    try {
-        const query = `
-            SELECT id, username, is_admin, avatar FROM Membre WHERE id='${_req.params.id}';
-        `;
-        const [rows] = await pool.query(query) as any;
-        const user = rows[0];
-        const token = generateTokenJWT(user);
-        res.status(200).send({ success: { user: user, token: token } });
-    } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
-    }
-});
-
-baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response) => {
-    try {
-        const query = `
-            INSERT INTO Membre(username, password, is_admin) 
-            VALUES('${_req.body.username}', '${hashPassword(_req.body.password)}', ${_req.body.is_admin});
-        `;
-        const [rows] = await pool.query(query);
-        res.status(200).send({ success: rows });
-    } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
-    }
-});
-
-baseRouter.put("/update_password", verifyToken, async (_req: Request, res: Response) => {
-    const { id, old_password, new_password } = _req.body;
-    try {
-        const query = `
-            UPDATE Membre SET password='${hashPassword(new_password)}' WHERE id='${id}' AND password='${hashPassword(old_password)}';
-        `;
-        const [rows] = await pool.query(query) as any;
-        if (rows.affectedRows === 1) {
-            res.status(200).send({ success: "Votre mot de passe a été mis à jour" });
-        } else {
-            res.status(400).send({ error: "Impossible de trouver votre compte" });
-        }
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
