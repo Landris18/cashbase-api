@@ -77,12 +77,10 @@ const isValidSessionId = async (user: any) => {
     `;
     const [rows] = await pool.query(query) as any;
     const currentUserSessionIds: string = rows[0]?.session_ids;
-    console.log(currentUserSessionIds.split(","), user);
-    
     return currentUserSessionIds.split(",").includes(user?.session_id);
 };
 
-const removeSessionId = async (user: any) => {
+export const removeSessionId = async (user: any, removeAll?: boolean) => {
     const query = `
         SELECT session_ids FROM Membre WHERE id=${user?.id};
     `;
@@ -91,13 +89,11 @@ const removeSessionId = async (user: any) => {
     let newUserSessionIdsList: string[] = [...currentUserSessionIds.split(",")];
 
     const index = newUserSessionIdsList.indexOf(user?.session_id);
-    if (index !== -1) {
-        newUserSessionIdsList = newUserSessionIdsList.splice(index, 1);
-    }
+    if (index !== -1) newUserSessionIdsList.splice(index, 1);
 
     const querySet = `
         UPDATE Membre 
-        SET session_ids='${newUserSessionIdsList.join(",")}'
+        SET session_ids='${removeAll ? '' : newUserSessionIdsList.join(",")}'
         WHERE id=${user?.id};
     `;
     await pool.query(querySet);

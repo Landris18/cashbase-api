@@ -2,7 +2,7 @@ import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
     verifyToken, hashPassword, getMonthFilter, getMonthNumber,
-    generateJwt, fillMissingMonths, addRevenusTotalsAndSoldesReel
+    generateJwt, fillMissingMonths, addRevenusTotalsAndSoldesReel, removeSessionId
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 import { v4 as uuidv4 } from 'uuid';
@@ -48,6 +48,21 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
         } else {
             res.status(401).send({ error: "Nom d'utilisateur ou mot de passe incorrect" });
         }
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
+/**
+ * 
+ * @Notes: Endpoint for authentications
+*/
+baseRouter.get("/logout", verifyToken, async (req: Request, res: Response) => {
+    try {
+        const remove_all = req.query.remove_all || false;
+        const _req: any = { ...req };
+        await removeSessionId(_req.user, JSON.parse(remove_all as any) === true);
+        res.status(200).send({ success: "Déconnexion réussie" });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
