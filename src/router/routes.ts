@@ -92,7 +92,7 @@ baseRouter.get("/membre/:id", verifyToken, async (req: Request, res: Response) =
         const queryToken = `
             SELECT token FROM Session WHERE id='${_req.user.session_id}' AND membre_id='${_req.user.id}';
         `;
-        const [rowsToken] = await pool.query(queryToken) as any; 
+        const [rowsToken] = await pool.query(queryToken) as any;
 
         res.status(200).send({ success: { user: rows[0], token: rowsToken[0].token } });
     } catch (_error: any) {
@@ -322,10 +322,12 @@ baseRouter.get("/get_stats", verifyToken, async (req: Request, res: Response) =>
             ORDER BY YEAR(date_creation), MONTH(date_creation);
         `;
 
-        const [rowsDette] = await pool.query(queryDette);
-        const [rowsDepense] = await pool.query(queryDepense);
-        const [rowsCotisation] = await pool.query(queryCotisation);
-        const [rowsRevenu] = await pool.query(queryRevenu);
+        const [[rowsDette], [rowsDepense], [rowsCotisation], [rowsRevenu]] = await Promise.all([
+            pool.query(queryDette),
+            pool.query(queryDepense),
+            pool.query(queryCotisation),
+            pool.query(queryRevenu)
+        ]);
 
         res.status(200).send({
             success: addRevenusTotalsAndSoldesReel(
@@ -362,10 +364,12 @@ baseRouter.get("/get_totals", verifyToken, async (_req: Request, res: Response) 
             FROM Revenu;
         `;
 
-        const [rowsDette] = await pool.query(queryTotalDette) as any;
-        const [rowsDepense] = await pool.query(queryTotalDepense) as any;
-        const [rowsRevenu] = await pool.query(queryTotalRevenu) as any;
-        const [rowsCotisation] = await pool.query(queryTotalCotisation) as any;
+        const [[rowsDette], [rowsCotisation], [rowsDepense], [rowsRevenu]] = await Promise.all([
+            pool.query(queryTotalDette),
+            pool.query(queryTotalCotisation),
+            pool.query(queryTotalDepense),
+            pool.query(queryTotalRevenu)
+        ]) as any;
 
         const total_dettes = rowsDette[0].montant_total ? parseInt(rowsDette[0].montant_total) : 0;
         const total_cotisations = rowsCotisation[0].montant_total ? parseInt(rowsCotisation[0].montant_total) : 0;
