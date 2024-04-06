@@ -2,7 +2,7 @@ import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
     verifyToken, hashPassword, getMonthFilter, getMonthNumber,
-    generateJwt, fillMissingMonths, addRevenusTotalsAndSoldesReel, removeSessionId
+    generateJwt, fillMissingMonths, addRevenusTotalsAndSoldesReel, removeSession
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,23 +27,20 @@ baseRouter.get("/", async (_req: Request, res: Response) => {
 baseRouter.post("/login", async (_req: Request, res: Response) => {
     try {
         const query = `
-            SELECT id, username, is_admin, avatar, session_ids FROM Membre WHERE username='${_req.body.username}' AND password='${hashPassword(_req.body.password)}';
+            SELECT id, username, is_admin, avatar FROM Membre WHERE username='${_req.body.username}' AND password='${hashPassword(_req.body.password)}';
         `;
         const [rows] = await pool.query(query) as any;
         if (Array.isArray(rows) && rows.length > 0) {
             const user = rows[0];
             const sessionId = uuidv4();
-            const currentUserSessionIds = rows[0].session_ids;
-
-            const querySet = `
-                UPDATE Membre 
-                SET session_ids='${['', null].includes(currentUserSessionIds) ? sessionId : `${currentUserSessionIds},${sessionId}`}' 
-                WHERE id=${rows[0].id};
-            `;
-            await pool.query(querySet);
-
             const token = generateJwt({ ...user, session_id: sessionId });
-            delete user.session_ids
+
+            const querySession = `
+                INSERT INTO Session(id, token, membre_id) 
+                VALUES('${sessionId}', '${token}', ${user.id});
+            `;
+            await pool.query(querySession);
+
             res.status(200).send({ success: { user: user, token: token } });
         } else {
             res.status(401).send({ error: "Nom d'utilisateur ou mot de passe incorrect" });
@@ -61,7 +58,7 @@ baseRouter.get("/logout", verifyToken, async (req: Request, res: Response) => {
     try {
         const remove_all = req.query.remove_all || false;
         const _req: any = { ...req };
-        await removeSessionId(_req.user, JSON.parse(remove_all as any) === true);
+        await removeSession(_req.user, JSON.parse(remove_all as any) === true);
         res.status(200).send({ success: "Déconnexion réussie" });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
@@ -84,13 +81,20 @@ baseRouter.get("/membres", verifyToken, async (_req: Request, res: Response) => 
     }
 });
 
-baseRouter.get("/membre/:id", verifyToken, async (_req: Request, res: Response) => {
+baseRouter.get("/membre/:id", verifyToken, async (req: Request, res: Response) => {
     try {
         const query = `
-            SELECT id, username, is_admin, avatar FROM Membre WHERE id='${_req.params.id}';
+            SELECT id, username, is_admin, avatar FROM Membre WHERE id='${req.params.id}';
         `;
         const [rows] = await pool.query(query) as any;
-        res.status(200).send({ success: { user: rows[0] } });
+
+        const _req: any = { ...req };
+        const queryToken = `
+            SELECT token FROM Session WHERE id='${_req.user.session_id}' AND membre_id='${_req.user.id}';
+        `;
+        const [rowsToken] = await pool.query(queryToken) as any; 
+
+        res.status(200).send({ success: { user: rows[0], token: rowsToken[0].token } });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }

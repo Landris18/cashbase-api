@@ -50,10 +50,9 @@ export const verifyToken = (req: any, res: Response, next: () => void) => {
     if (typeof bearerHeader !== 'undefined') {
         const bearerToken = bearerHeader.split(' ')[1];
         jwt.verify(bearerToken, process.env.SECRET_KEY as string, async (err: any, decoded: any) => {
-
-            const sessionValid = await isValidSessionId(jwt.decode(bearerToken));
+            const sessionValid = await isValidSession(jwt.decode(bearerToken));
             if (err || !sessionValid) {
-                await removeSessionId(jwt.decode(bearerToken));
+                await removeSession(jwt.decode(bearerToken));
                 return res.status(403).json({ error: "Token expired" });
             }
 
@@ -71,32 +70,19 @@ export const verifyToken = (req: any, res: Response, next: () => void) => {
     }
 };
 
-const isValidSessionId = async (user: any) => {
+const isValidSession = async (user: any) => {
     const query = `
-        SELECT session_ids FROM Membre WHERE id=${user?.id};
+        SELECT 1 FROM Session WHERE id='${user?.session_id}' AND membre_id=${user?.id};
     `;
     const [rows] = await pool.query(query) as any;
-    const currentUserSessionIds: string = rows[0]?.session_ids;
-    return currentUserSessionIds.split(",").includes(user?.session_id);
+    return (Array.isArray(rows) && rows.length > 0);
 };
 
-export const removeSessionId = async (user: any, removeAll?: boolean) => {
+export const removeSession = async (user: any, removeAll?: boolean) => {
     const query = `
-        SELECT session_ids FROM Membre WHERE id=${user?.id};
+        DELETE FROM Session WHERE ${removeAll ? `membre_id=${user?.id}` : `id='${user?.session_id}'`};
     `;
-    const [rows] = await pool.query(query) as any;
-    const currentUserSessionIds: string = rows[0]?.session_ids;
-    let newUserSessionIdsList: string[] = [...currentUserSessionIds.split(",")];
-
-    const index = newUserSessionIdsList.indexOf(user?.session_id);
-    if (index !== -1) newUserSessionIdsList.splice(index, 1);
-
-    const querySet = `
-        UPDATE Membre 
-        SET session_ids='${removeAll ? '' : newUserSessionIdsList.join(",")}'
-        WHERE id=${user?.id};
-    `;
-    await pool.query(querySet);
+    await pool.query(query);
 };
 
 /**
