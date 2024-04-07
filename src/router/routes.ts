@@ -50,10 +50,6 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
     }
 });
 
-/**
- * 
- * @Notes: Endpoint for authentications
-*/
 baseRouter.get("/logout", verifyToken, async (req: Request, res: Response) => {
     try {
         const remove_all = req.query.remove_all || false;
@@ -113,14 +109,17 @@ baseRouter.post("/add_membre", verifyToken, async (_req: Request, res: Response)
     }
 });
 
-baseRouter.put("/update_password", verifyToken, async (_req: Request, res: Response) => {
-    const { id, old_password, new_password } = _req.body;
+baseRouter.put("/update_password", verifyToken, async (req: Request, res: Response) => {
+    const { id, old_password, new_password } = req.body;
     try {
         const query = `
             UPDATE Membre SET password='${hashPassword(new_password)}' WHERE id='${id}' AND password='${hashPassword(old_password)}';
         `;
         const [rows] = await pool.query(query) as any;
         if (rows.affectedRows === 1) {
+            // Remove all sessions of the user
+            const _req: any = { ...req };
+            await removeSession(_req.user, true);
             res.status(200).send({ success: "Votre mot de passe a été mis à jour" });
         } else {
             res.status(400).send({ error: "Impossible de trouver votre compte" });
