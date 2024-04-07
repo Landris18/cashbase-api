@@ -232,8 +232,8 @@ baseRouter.get("/dettes", verifyToken, async (_req: Request, res: Response) => {
 baseRouter.post("/add_dette", verifyToken, async (_req: Request, res: Response) => {
     try {
         const query = `
-            INSERT INTO Dette(montant, raison, debiteur, is_paye) 
-            VALUES(${_req.body.montant}, ${_req.body.raison ? `'${_req.body.raison}'` : null}, '${_req.body.debiteur}', ${_req.body.is_paye});
+            INSERT INTO Dette(montant, raison, debiteur, montant_reste, is_paye) 
+            VALUES(${_req.body.montant}, ${_req.body.raison ? `'${_req.body.raison}'` : null}, '${_req.body.debiteur}', ${_req.body.montant_reste},  ${_req.body.is_paye});
         `
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
@@ -244,10 +244,11 @@ baseRouter.post("/add_dette", verifyToken, async (_req: Request, res: Response) 
 
 baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response) => {
     try {
-        const { id, montant, raison, debiteur, is_paye } = req.body;
+        const { id, montant, montant_reste, raison, debiteur, is_paye } = req.body;
 
         const setClauses = [];
         if (montant && montant !== "") setClauses.push(`montant = '${montant}'`);
+        if (montant_reste && montant_reste !== "") setClauses.push(`montant_reste = '${montant_reste}'`);
         if (raison && raison !== "") setClauses.push(`raison = '${raison}'`);
         if (debiteur && debiteur !== "") setClauses.push(`debiteur = '${debiteur}'`);
         if (is_paye && is_paye !== "") setClauses.push(`is_paye = ${is_paye}`);
@@ -259,7 +260,7 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
         `;
 
         const [rows] = await pool.query(query);
-        res.status(200).send({ success: rows });
+        res.status(200).send({ success: "La dette a été mis à jour" });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
@@ -347,7 +348,7 @@ baseRouter.get("/get_stats", verifyToken, async (req: Request, res: Response) =>
 baseRouter.get("/get_totals", verifyToken, async (_req: Request, res: Response) => {
     try {
         const queryTotalDette = `            
-            SELECT SUM(montant) AS montant_total
+            SELECT SUM(montant_reste) AS montant_total
             FROM Dette
             WHERE is_paye = 0;
         `;
