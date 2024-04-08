@@ -2,7 +2,7 @@ import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
     verifyToken, hashPassword, getMonthFilter, getMonthNumber,
-    generateToken, fillMissingMonths, addRevenusTotalsAndSoldesReel, removeSession
+    generateToken, fillMissingMonths, addRevenusTotalsAndSoldesReel, removeSession, groupCotisationsByMembreId
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 import { v4 as uuidv4 } from 'uuid';
@@ -139,10 +139,10 @@ baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response)
         const mois = _req.query.mois || moisFilter;
         const annee = _req.query.annee || anneeFilter;
         const only_paid = _req.query.only_paid || false;
-        const membre_id = _req.query.membre_id || false;
+        const group_by_membre = _req.query.group_by_membre || false;
 
         let query: string;
-        if (!membre_id) {
+        if (!group_by_membre) {
             query = `
                 SELECT 
                     Membre.username, 
@@ -157,14 +157,12 @@ baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response)
                 ORDER BY Cotisation.date_paiement ASC;
             `;
         } else {
-            query = `
-                SELECT mois, annee FROM Cotisation WHERE membre_id = ${membre_id};
-            `;
+            query = `SELECT membre_id, mois, annee FROM Cotisation;`;
         }
         const [rows] = await pool.query(query);
-        res.status(200).send({ success: { cotisations: rows } });
+        res.status(200).send({ success: { cotisations: !group_by_membre ? rows : groupCotisationsByMembreId(rows) } });
     } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
+        res.status(400).send({ error: _error });
     }
 });
 

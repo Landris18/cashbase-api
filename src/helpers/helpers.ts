@@ -251,3 +251,31 @@ const accumulateDette = (dettes: any) => {
     });
     return modifiedDettesList;
 };
+
+export const groupCotisationsByMembreId = (cotisations: any) => {
+    const groupedCotisations: { [membreId: number]: any } = {};
+
+    cotisations.forEach((cotisation: any) => {
+        if (!groupedCotisations[cotisation.membre_id]) {
+            groupedCotisations[cotisation.membre_id] = [];
+        }
+        groupedCotisations[cotisation.membre_id].push(cotisation);
+    });
+
+    return Object.keys(groupedCotisations).map(membreId => ({
+        membre_id: parseInt(membreId),
+        annees: Object.keys(groupedCotisations[parseInt(membreId)].reduce((acc: any, curr: any) => {
+            acc[curr.annee] = acc[curr.annee] || [];
+            acc[curr.annee].push(curr.mois);
+            return acc;
+        }, {})).reduce((acc: any, year: string) => {
+            acc[year] = groupedCotisations[parseInt(membreId)].reduce((acc: any, curr: any) => {
+                if (curr.annee === year) {
+                    acc.push(curr.mois);
+                }
+                return acc;
+            }, []);
+            return acc;
+        }, {})
+    }));
+};
