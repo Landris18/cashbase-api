@@ -2,7 +2,7 @@ import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
     verifyToken, hashPassword, getMonthFilter, getMonthNumber,
-    generateJwt, fillMissingMonths, addRevenusTotalsAndSoldesReel, removeSession
+    generateToken, fillMissingMonths, addRevenusTotalsAndSoldesReel, removeSession
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 import { v4 as uuidv4 } from 'uuid';
@@ -33,7 +33,7 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
         if (Array.isArray(rows) && rows.length > 0) {
             const user = rows[0];
             const sessionId = uuidv4();
-            const token = generateJwt({ ...user, session_id: sessionId });
+            const token = generateToken({ ...user, session_id: sessionId });
 
             const querySession = `
                 INSERT INTO Session(id, token, membre_id) 
@@ -139,21 +139,28 @@ baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response)
         const mois = _req.query.mois || moisFilter;
         const annee = _req.query.annee || anneeFilter;
         const only_paid = _req.query.only_paid || false;
+        const membre_id = _req.query.membre_id || false;
 
-        const query = `
-            SELECT 
-                Membre.username, 
-                Cotisation.date_paiement, 
-                Cotisation.mois, 
-                Cotisation.annee, 
-                Cotisation.montant, 
-                Cotisation.mode_paiement
-            FROM Membre
-            LEFT JOIN Cotisation ON Membre.id = Cotisation.membre_id 
-            ${JSON.parse(only_paid as any) === true ? "WHERE" : "AND"} Cotisation.mois = '${mois}' AND Cotisation.annee = ${annee}
-            ORDER BY Cotisation.date_paiement ASC;
-        `;
-
+        let query: string;
+        if (!membre_id) {
+            query = `
+                SELECT 
+                    Membre.username, 
+                    Cotisation.date_paiement, 
+                    Cotisation.mois, 
+                    Cotisation.annee, 
+                    Cotisation.montant, 
+                    Cotisation.mode_paiement
+                FROM Membre
+                LEFT JOIN Cotisation ON Membre.id = Cotisation.membre_id 
+                ${JSON.parse(only_paid as any) === true ? "WHERE" : "AND"} Cotisation.mois = '${mois}' AND Cotisation.annee = ${annee}
+                ORDER BY Cotisation.date_paiement ASC;
+            `;
+        } else {
+            query = `
+                SELECT mois, annee FROM Cotisation WHERE membre_id = ${membre_id};
+            `;
+        }
         const [rows] = await pool.query(query);
         res.status(200).send({ success: { cotisations: rows } });
     } catch (_error: any) {
@@ -258,7 +265,7 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
             WHERE id = ${id};
         `;
 
-        const [rows] = await pool.query(query);
+        await pool.query(query);
         res.status(200).send({ success: "La dette a été mis à jour" });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });

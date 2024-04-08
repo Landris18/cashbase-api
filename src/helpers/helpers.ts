@@ -17,21 +17,21 @@ const whiteListPath = ["/update_password"];
 interface MontantItem {
     mois: number;
     totalMontant: number;
-}
+};
 
 interface ResultObject {
     dettes: MontantItem[];
     depenses: MontantItem[];
     cotisations: MontantItem[];
     revenus: MontantItem[];
-}
+};
 
 /**
  * 
  * @Notes: Functions for token manipulation
 */
 
-export const generateJwt = (user: any): string => {
+export const generateToken = (user: any): string => {
     const payload = {
         id: user.id,
         username: user.username,
@@ -105,9 +105,7 @@ export const getMonthFilter = (): any => {
     const firstDayOfPreviousMonth = new Date(currentDate.getFullYear(), previousMonth, 1);
 
     const formatter = new Intl.DateTimeFormat(FR_LOCALE, MONTH_OPTIONS);
-
     const mois = capitalizeFirstLetter(formatter.format(firstDayOfPreviousMonth));
-
     const minus = mois === "Décembre" ? 1 : 0;
     return { moisFilter: mois, anneeFilter: (new Date().getFullYear() - minus) };
 };
@@ -192,7 +190,7 @@ export const fillMissingMonths = (data: any): ResultObject => {
 
     result.dettes = accumulateDette(result.dettes);
     return result;
-}
+};
 
 export const addRevenusTotalsAndSoldesReel = (data: any) => {
     const cotisationsArray = data.cotisations;
@@ -225,7 +223,7 @@ export const addRevenusTotalsAndSoldesReel = (data: any) => {
     data.soldes_reel = soldesReelArray;
 
     return data;
-}
+};
 
 const capitalizeFirstLetter = (string: string): string => {
     return string.charAt(0).toUpperCase() + string.slice(1);
@@ -240,7 +238,7 @@ const monthsList = Array.from({ length: 12 }, (_, index) => {
 export const getMonthNumber = (monthFrenchString: string): number | null => {
     const index: number = monthsList.findIndex(item => item === monthFrenchString);
     return index >= 0 ? index + 1 : null;
-}
+};
 
 const accumulateDette = (dettes: any) => {
     let accumulatedTotalMontant = 0;
