@@ -4,8 +4,7 @@ import cors, { CorsOptions } from "cors";
 import { Application, PathParams } from "express-serve-static-core";
 import baseRouter from "./router/routes";
 
-
-const daz = express();
+const cashbase = express();
 const port = 3000;
 
 const options: CorsOptions = {
@@ -13,21 +12,21 @@ const options: CorsOptions = {
     credentials: true,
     methods: "*",
     origin: "*",
-    preflightContinue: false
+    preflightContinue: false,
+    exposedHeaders: "Authorization"
 };
 const corsMiddleware = cors(options);
 
-daz.use(corsMiddleware as unknown as PathParams);
-daz.options("*", corsMiddleware as unknown as Application<Record<string, any>>);
-daz.use(bodyParser.json());
+cashbase.use(corsMiddleware as unknown as PathParams);
+cashbase.options("*", corsMiddleware as unknown as Application<Record<string, any>>);
+cashbase.use(bodyParser.json());
 
-daz.use('/api', baseRouter);
+cashbase.use('/api', baseRouter);
 
-daz.get("/", (_req: Request, res: Response) => {
+cashbase.get("/", (_req: Request, res: Response) => {
     res.redirect("/api/");
 });
 
-
-daz.listen(port, () => {
+cashbase.listen(port, () => {
     console.log(`Listening on port ${port}`);
 });
