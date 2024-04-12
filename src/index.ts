@@ -8,13 +8,13 @@ const cashbase = express();
 const port = 3000;
 
 const options: CorsOptions = {
-    allowedHeaders: "*",
+    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"],
     credentials: true,
     methods: "*",
     origin: "*",
-    preflightContinue: false,
-    exposedHeaders: "Authorization"
+    preflightContinue: false
 };
+
 const corsMiddleware = cors(options);
 
 cashbase.use(corsMiddleware as unknown as PathParams);
