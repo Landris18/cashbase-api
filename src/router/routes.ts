@@ -48,7 +48,7 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
             res.status(401).send({ error: "Nom d'utilisateur ou mot de passe incorrect" });
         }
     } catch (_error: any) {
-        res.status(400).send({ error: _error });
+        res.status(400).send({ error: MESSAGE_400 });
     }
 });
 
