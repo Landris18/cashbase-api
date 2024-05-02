@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
@@ -34,10 +35,11 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
             const user = rows[0];
             const sessionId = uuidv4();
             const token = generateToken({ ...user, session_id: sessionId });
+            const dateCreation = dayjs(new Date()).format();
 
             const querySession = `
-                INSERT INTO Session(id, token, membre_id) 
-                VALUES('${sessionId}', '${token}', ${user.id});
+                INSERT INTO Session(id, token, membre_id, date_creation) 
+                VALUES('${sessionId}', '${token}', ${user.id}, '${dateCreation}');
             `;
             await pool.query(querySession);
 
@@ -46,7 +48,7 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
             res.status(401).send({ error: "Nom d'utilisateur ou mot de passe incorrect" });
         }
     } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
+        res.status(400).send({ error: _error });
     }
 });
 
@@ -117,7 +119,7 @@ baseRouter.put("/update_password", verifyToken, async (req: Request, res: Respon
         `;
         const [rows] = await pool.query(query) as any;
         if (rows.affectedRows === 1) {
-            // Remove all sessions of the user
+            // Remove all the user's sessions
             const _req: any = { ...req };
             await removeSession(_req.user, true);
             res.status(200).send({ success: "Votre mot de passe a été mis à jour" });
