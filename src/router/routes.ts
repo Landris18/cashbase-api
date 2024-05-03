@@ -35,7 +35,7 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
             const user = rows[0];
             const sessionId = uuidv4();
             const token = generateToken({ ...user, session_id: sessionId });
-            const dateCreation = dayjs(new Date()).format();
+            const dateCreation = dayjs().format('YYYY-MM-DD HH:mm:ss');
 
             const querySession = `
                 INSERT INTO Session(id, token, membre_id, date_creation) 
