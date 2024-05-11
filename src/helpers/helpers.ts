@@ -11,8 +11,8 @@ const FR_LOCALE = 'fr-FR';
 const MONTH_YEAR_REGEX = new RegExp(
     `^(Janvier|Février|Mars|Avril|Mai|Juin|Juillet|Août|Septembre|Octobre|Novembre|Décembre)\\s(${new Date().getFullYear()}|${new Date().getFullYear() + 1})$`
 );
-
-const whiteListPath = ["/update_password"];
+const WHITE_PATH = ["/update_password"];
+const BLACK_PATH = ["/export_db"];
 
 interface MontantItem {
     mois: number;
@@ -39,7 +39,7 @@ export const generateToken = (user: any): string => {
         session_id: user.session_id
     };
     const options = {
-        expiresIn: '48h'
+        expiresIn: '168h'
     };
     const token = jwt.sign(payload, process.env.SECRET_KEY as string, options);
     return token
@@ -53,20 +53,21 @@ export const verifyToken = (req: any, res: Response, next: () => void) => {
             const sessionValid = await isValidSession(jwt.decode(bearerToken));
             if (err || !sessionValid) {
                 await removeSession(jwt.decode(bearerToken));
-                return res.status(403).json({ error: "Token expired" });
+                return res.status(403).json({ error: "Token expiré" });
             }
-
-            if (decoded.is_admin === 0 && req.method !== "GET") {
-                if (!whiteListPath.includes(req.route.path)) {
-                    return res.status(401).json({ error: "Unauthorized" });
+            if (decoded.is_admin === 0) {
+                if (req.method !== "GET") {
+                    if (!WHITE_PATH.includes(req.route.path)) return res.status(401).json({ error: "Authorisation requise" });
+                }
+                if (req.method === "GET") {
+                    if (BLACK_PATH.includes(req.route.path)) return res.status(401).json({ error: "Authorisation requise" });
                 }
             }
-
             req.user = decoded;
             next();
         });
     } else {
-        res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: 'Authorisation requise' });
     }
 };
 
