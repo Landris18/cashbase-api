@@ -22,13 +22,13 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.9.1",
+    "mysqldump": "^3.2.0",
     "nodemon": "^2.0.20",
     "ts-node": "^10.9.1",
     "typescript": "^4.9.5",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@flydotio/dockerfile": "^0.5.2",
     "ts-node": "^10.9.1"
   }
 }

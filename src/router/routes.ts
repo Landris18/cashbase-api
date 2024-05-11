@@ -1,24 +1,58 @@
+import fs from "fs";
 import dayjs from 'dayjs';
 import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
     verifyToken, hashPassword, getMonthFilter, getMonthNumber,
-    generateToken, fillMissingMonths, addRevenusTotalsAndSoldesReel, removeSession, groupCotisationsByMembreId
+    generateToken, fillMissingMonths, addRevenusTotalsAndSoldesReel, 
+    removeSession, groupCotisationsByMembreId
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 import { v4 as uuidv4 } from 'uuid';
+import mysqldump from "mysqldump";
+import dotenv from 'dotenv';
 
-
-const MESSAGE_400 = "Oups, une erreur s'est produite !";
+dotenv.config();
 const baseRouter = Router();
+const MESSAGE_400 = "Oups, une erreur s'est produite !";
 
 
 /**
  * 
- * @Notes: Endpoint for route
+ * @Notes: Endpoint for base route
 */
 baseRouter.get("/", async (_req: Request, res: Response) => {
     res.send("Cashbase-api is running...");
+});
+
+/**
+ * 
+ * @Notes: Endpoint to export the database to sql file
+*/
+baseRouter.get('/export_db', async (_req: Request, res: Response) => {
+    try {
+        const fileName = "community.sql.gz";
+        await mysqldump({
+            connection: {
+                host: (process.env.DB_HOST)?.split(":")[0],
+                port: parseInt(process.env.DB_PORT as string),
+                user: process.env.DB_USER as string,
+                password: process.env.DB_PASSWORD as string,
+                database: process.env.DB_NAME as string
+            },
+            dumpToFile: `./${fileName}`
+        });
+        const fileStream = fs.createReadStream(`./${fileName}`);
+
+        // Set response headers to trigger file download
+        res.setHeader('Content-disposition', `attachment; filename=${fileName}`);
+        res.setHeader('Content-type', 'application/gzip');
+
+        // Pipe the compressed dump to the response
+        fileStream.pipe(res);
+    } catch (_error: any) {
+        res.status(500).send({ error: _error });
+    }
 });
 
 /**
