@@ -25,10 +25,9 @@ export const addCotisation = async (data: CotisationData) => {
         const [rows] = await pool.query(queryOne) as any;
 
         if (rows.length === 0) {
-            const formatedDate = dayjs(data.date_paiement).format("YYYY-MM-DD");
             const query = `
                 INSERT INTO Cotisation(date_paiement, mois, annee, montant, mode_paiement, membre_id) 
-                VALUES('${formatedDate}', '${anneeMois.mois}', '${anneeMois.annee}', 5000, '${data.mode_paiement}', ${data.membre_id});
+                VALUES('${dayjs(data.date_paiement).format("YYYY-MM-DD")}', '${anneeMois.mois}', '${anneeMois.annee}', 5000, '${data.mode_paiement}', ${data.membre_id});
             `;
             await pool.query(query);
             saved += 1;

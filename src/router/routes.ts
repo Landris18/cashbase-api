@@ -119,9 +119,8 @@ baseRouter.put("/update_password", verifyToken, async (req: Request, res: Respon
         `;
         const [rows] = await pool.query(query) as any;
         if (rows.affectedRows === 1) {
-            // Remove all the user's sessions
             const _req: any = { ...req };
-            await removeSession(_req.user, true);
+            await removeSession(_req.user, true); // Remove all the user's sessions
             res.status(200).send({ success: "Votre mot de passe a été mis à jour" });
         } else {
             res.status(400).send({ error: "Impossible de trouver votre compte" });
@@ -221,6 +220,32 @@ baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) =>
     }
 });
 
+baseRouter.post("/add_depense", verifyToken, async (req: Request, res: Response) => {
+    try {
+        const { date_creation, montant, raison, dette_id } = req.body;
+
+        const query = `
+            INSERT INTO Depense(date_creation, montant, raison, dette_id) 
+            VALUES('${dayjs(date_creation).format("YYYY-MM-DD")}', ${montant}, '${raison}', ${dette_id ?? null});
+        `;
+        await pool.query(query) as any;
+
+        if (dette_id) {
+            const queryGetDette = `SELECT montant_reste FROM Dette WHERE id = ${dette_id};`;
+            const [rows] = await pool.query(queryGetDette) as any;
+            if (Array.isArray(rows) && rows.length > 0) {
+                const dette = rows[0];
+                const montantRestant = dette.montant_reste - montant;
+                const queryUpdateDette = `UPDATE Dette SET montant_reste = ${montantRestant} WHERE id = ${dette_id};`;
+                await pool.query(queryUpdateDette) as any;
+            }
+        }
+        res.status(200).send({ success: "Dépense ajouté avec succès" });
+    } catch (_error: any) {
+        res.status(400).send({ error: MESSAGE_400 });
+    }
+});
+
 /**
  * 
  * @Notes: Endpoints for dettes
@@ -240,7 +265,7 @@ baseRouter.post("/add_dette", verifyToken, async (_req: Request, res: Response) 
         const query = `
             INSERT INTO Dette(montant, raison, debiteur, montant_reste, is_paye) 
             VALUES(${_req.body.montant}, ${_req.body.raison ? `'${_req.body.raison}'` : null}, '${_req.body.debiteur}', ${_req.body.montant_reste},  ${_req.body.is_paye});
-        `
+        `;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
     } catch (_error: any) {
@@ -253,8 +278,8 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
         const { id, montant, montant_reste, raison, debiteur, is_paye } = req.body;
 
         const setClauses = [];
-        if (montant && montant !== "") setClauses.push(`montant = '${montant}'`);
-        if (montant_reste && montant_reste !== "") setClauses.push(`montant_reste = '${montant_reste}'`);
+        if (montant && montant !== "") setClauses.push(`montant = ${montant}`);
+        if (montant_reste && montant_reste !== "") setClauses.push(`montant_reste = ${montant_reste}`);
         if (raison && raison !== "") setClauses.push(`raison = '${raison}'`);
         if (debiteur && debiteur !== "") setClauses.push(`debiteur = '${debiteur}'`);
         if (is_paye && is_paye !== "") setClauses.push(`is_paye = ${is_paye}`);
