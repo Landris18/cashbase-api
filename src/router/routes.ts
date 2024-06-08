@@ -254,23 +254,33 @@ baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) =>
 baseRouter.post("/add_depense", verifyToken, async (req: Request, res: Response) => {
     try {
         const { date_creation, montant, raison, dette_id } = req.body;
-
+        /**
+         * On procède d'abord au traitement de la dette
+        */
+        if (dette_id) {
+            const queryGetDette = `SELECT montant_reste FROM Dette WHERE id = ${dette_id};`;
+            const [rows] = await pool.query(queryGetDette) as any;
+            if (Array.isArray(rows) && rows.length > 0) {
+                const dette = rows[0];
+                if (montant > dette.montant_reste) {
+                    res.status(400).send({ error: "Le montant saisi est supérieur au montant restant de la dette concernée." });
+                }
+                const montantRestant = dette.montant_reste - montant;
+                const queryUpdateDette = `
+                    UPDATE Dette SET montant_reste = ${montantRestant}, is_paye = ${montantRestant === 0 ? 1 : 0} WHERE id = ${dette_id};
+                `;
+                await pool.query(queryUpdateDette) as any;
+            }
+        }
+        /**
+         * Puis on enregistre la dépense
+        */
         const query = `
             INSERT INTO Depense(date_creation, montant, raison, dette_id) 
             VALUES('${dayjs(date_creation).format("YYYY-MM-DD")}', ${montant}, '${raison}', ${dette_id ?? null});
         `;
         await pool.query(query) as any;
 
-        if (dette_id) {
-            const queryGetDette = `SELECT montant_reste FROM Dette WHERE id = ${dette_id};`;
-            const [rows] = await pool.query(queryGetDette) as any;
-            if (Array.isArray(rows) && rows.length > 0) {
-                const dette = rows[0];
-                const montantRestant = dette.montant_reste - montant;
-                const queryUpdateDette = `UPDATE Dette SET montant_reste = ${montantRestant} WHERE id = ${dette_id};`;
-                await pool.query(queryUpdateDette) as any;
-            }
-        }
         res.status(200).send({ success: "Dépense ajouté avec succès" });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
