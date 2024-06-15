@@ -4,7 +4,7 @@ import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
     verifyToken, hashPassword, getMonthFilter, getMonthNumber,
-    generateToken, fillMissingMonths, addRevenusTotalsAndSoldesReel,
+    generateToken, fillMissingMonths, addRevenusTotalsAndProfits,
     removeSession, groupCotisationsByMembreId
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
@@ -403,7 +403,7 @@ baseRouter.get("/get_stats", verifyToken, async (req: Request, res: Response) =>
         ]);
 
         res.status(200).send({
-            success: addRevenusTotalsAndSoldesReel(
+            success: addRevenusTotalsAndProfits(
                 fillMissingMonths({
                     dettes: rowsDette,
                     depenses: rowsDepense,
@@ -449,8 +449,8 @@ baseRouter.get("/get_totals", verifyToken, async (_req: Request, res: Response) 
         const total_depenses = rowsDepense[0].montant_total ? parseInt(rowsDepense[0].montant_total) : 0;
         const total_revenus = rowsRevenu[0].montant_total ? parseInt(rowsRevenu[0].montant_total) : 0;
         const total_revenus_total = total_revenus + total_cotisations;
-        const total_soldes = total_revenus + total_cotisations - total_depenses;
-        const total_soldes_reel = total_revenus + total_cotisations - total_depenses - total_dettes;
+        const total_soldes = total_revenus_total - total_depenses;
+        const total_soldes_reel = total_revenus_total - total_depenses - total_dettes;
 
         res.status(200).send({
             success: {

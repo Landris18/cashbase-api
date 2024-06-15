@@ -136,7 +136,7 @@ export const checkMonthYear = (dataMoisAnnee: string[]) => {
     };
 };
 
-export const checkCoherence = (montant: number, nbRetards:number, lenDataMois: number) => {
+export const checkCoherence = (montant: number, nbRetards: number, lenDataMois: number) => {
     const expectedMontant = (5000 * lenDataMois) + (nbRetards * 2500);
     const coherence = montant === expectedMontant;
     return {
@@ -195,11 +195,10 @@ export const fillMissingMonths = (data: any): ResultObject => {
     return result;
 };
 
-export const addRevenusTotalsAndSoldesReel = (data: any) => {
+export const addRevenusTotalsAndProfits = (data: any) => {
     const cotisationsArray = data.cotisations;
     const revenusArray = data.revenus;
     const depensesArray = data.depenses;
-    const dettesArray = data.dettes;
 
     const revenusTotalArray = cotisationsArray.map((cotisation: any) => {
         const mois = cotisation.mois;
@@ -213,17 +212,16 @@ export const addRevenusTotalsAndSoldesReel = (data: any) => {
     });
     data.revenus_total = revenusTotalArray;
 
-    const soldesReelArray = revenusTotalArray.map((revenusTotal: any) => {
+    const profitsArray = revenusTotalArray.map((revenusTotal: any) => {
         const mois = revenusTotal.mois;
         const depenses = depensesArray.find((depense: any) => depense.mois === mois)?.totalMontant || 0;
-        const dettes = dettesArray.find((dette: any) => dette.mois === mois)?.totalMontant || 0;
 
         return {
             mois,
-            totalMontant: revenusTotal.totalMontant - depenses - dettes
+            totalMontant: revenusTotal.totalMontant - depenses
         };
     });
-    data.soldes_reel = soldesReelArray;
+    data.profits = profitsArray;
 
     return data;
 };
