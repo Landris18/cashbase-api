@@ -136,8 +136,8 @@ export const checkMonthYear = (dataMoisAnnee: string[]) => {
     };
 };
 
-export const checkCoherence = (montant: number, lenDataMois: number) => {
-    const expectedMontant = 5000 * lenDataMois;
+export const checkCoherence = (montant: number, nbRetards:number, lenDataMois: number) => {
+    const expectedMontant = (5000 * lenDataMois) + (nbRetards * 2500);
     const coherence = montant === expectedMontant;
     return {
         coherence: coherence,
