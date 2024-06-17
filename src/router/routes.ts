@@ -267,7 +267,9 @@ baseRouter.post("/add_depense", verifyToken, async (req: Request, res: Response)
                 }
                 const montantRestant = dette.montant_reste - montant;
                 const queryUpdateDette = `
-                    UPDATE Dette SET montant_reste = ${montantRestant}, is_paye = ${montantRestant === 0 ? 1 : 0} WHERE id = ${dette_id};
+                    UPDATE Dette 
+                    SET montant_reste = ${montantRestant}, date_maj = '${dayjs().format('YYYY-MM-DD')}', is_paye = ${montantRestant === 0 ? 1 : 0} 
+                    WHERE id = ${dette_id};
                 `;
                 await pool.query(queryUpdateDette) as any;
             }
@@ -293,7 +295,7 @@ baseRouter.post("/add_depense", verifyToken, async (req: Request, res: Response)
 */
 baseRouter.get("/dettes", verifyToken, async (_req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM Dette ORDER BY date_creation DESC;`;
+        const query = `SELECT * FROM Dette ORDER BY montant_reste DESC;`;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: { dettes: rows } });
     } catch (_error: any) {
@@ -304,8 +306,15 @@ baseRouter.get("/dettes", verifyToken, async (_req: Request, res: Response) => {
 baseRouter.post("/add_dette", verifyToken, async (_req: Request, res: Response) => {
     try {
         const query = `
-            INSERT INTO Dette(montant, raison, debiteur, montant_reste, is_paye) 
-            VALUES(${_req.body.montant}, ${_req.body.raison ? `'${_req.body.raison}'` : null}, '${_req.body.debiteur}', ${_req.body.montant_reste},  ${_req.body.is_paye});
+            INSERT INTO Dette(montant, raison, debiteur, montant_reste, date_maj, is_paye) 
+            VALUES(
+                ${_req.body.montant}, 
+                ${_req.body.raison ? `'${_req.body.raison}'` : null}, 
+                '${_req.body.debiteur}', 
+                ${_req.body.montant_reste},  
+                '${dayjs().format('YYYY-MM-DD')}',  
+                ${_req.body.is_paye}
+            );
         `;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: rows });
@@ -324,6 +333,7 @@ baseRouter.put("/update_dette", verifyToken, async (req: Request, res: Response)
         if (raison && raison !== "") setClauses.push(`raison = '${raison}'`);
         if (debiteur && debiteur !== "") setClauses.push(`debiteur = '${debiteur}'`);
         if (is_paye && is_paye !== "") setClauses.push(`is_paye = ${is_paye}`);
+        setClauses.push(`date_maj = '${dayjs().format('YYYY-MM-DD')}'`);
 
         const query = `
             UPDATE Dette
