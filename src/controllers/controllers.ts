@@ -15,7 +15,7 @@ export const addCotisation = async (data: CotisationData) => {
     const { valid, dataMoisAnnee, message } = checkMonthYear(data.lst_mois_annee);
     if (!valid) return { status: 400, message: { error: message } };
 
-    const { coherence, messageCoherence } = checkCoherence(data.montant, data.nb_retards, dataMoisAnnee?.length);
+    const { coherence, messageCoherence } = checkCoherence(data.montant, data.nb_retards ?? 0, dataMoisAnnee?.length);
     if (!coherence) return { status: 400, message: { error: messageCoherence } };
 
     let saved: number = 0;

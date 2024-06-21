@@ -295,7 +295,7 @@ baseRouter.post("/add_depense", verifyToken, async (req: Request, res: Response)
 */
 baseRouter.get("/dettes", verifyToken, async (_req: Request, res: Response) => {
     try {
-        const query = `SELECT * FROM Dette ORDER BY montant_reste DESC;`;
+        const query = `SELECT * FROM Dette ORDER BY date_maj DESC;`;
         const [rows] = await pool.query(query);
         res.status(200).send({ success: { dettes: rows } });
     } catch (_error: any) {
