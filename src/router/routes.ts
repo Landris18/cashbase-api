@@ -3,9 +3,9 @@ import dayjs from 'dayjs';
 import { pool } from '../db/db';
 import { Request, Response, Router } from 'express';
 import {
-    verifyToken, hashPassword, getMonthFilter, getMonthNumber,
+    verifyToken, hashPassword, getFilter, getMonthNumber,
     generateToken, fillMissingMonths, addRevenusTotalsAndProfits,
-    removeSession, groupCotisationsByMembreId
+    removeSession, groupCotisationsByMembreId,
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 import { v4 as uuidv4 } from 'uuid';
@@ -58,9 +58,9 @@ baseRouter.post("/login", async (_req: Request, res: Response) => {
 
 baseRouter.get("/logout", verifyToken, async (req: Request, res: Response) => {
     try {
-        const remove_all = req.query.remove_all || false;
+        const remove_all = JSON.parse(req.query.remove_all as any || false);
         const _req: any = { ...req };
-        await removeSession(_req.user, JSON.parse(remove_all as any) === true);
+        await removeSession(_req.user, remove_all);
         res.status(200).send({ success: "Déconnexion réussie" });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
@@ -167,11 +167,11 @@ baseRouter.put("/update_password", verifyToken, async (req: Request, res: Respon
 */
 baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response) => {
     try {
-        const { moisFilter, anneeFilter } = getMonthFilter();
-        const mois = _req.query.mois || moisFilter;
+        const { _, anneeFilter } = getFilter();
+        const mois = _req.query.mois;
         const annee = _req.query.annee || anneeFilter;
-        const only_paid = _req.query.only_paid || false;
-        const group_by_membre = _req.query.group_by_membre || false;
+        const group_by_membre = JSON.parse(_req.query.group_by_membre as any || false);
+        const only_paid = JSON.parse(_req.query.only_paid as any || false);
 
         let query: string;
         if (!group_by_membre) {
@@ -185,7 +185,7 @@ baseRouter.get("/cotisations", verifyToken, async (_req: Request, res: Response)
                     Cotisation.mode_paiement
                 FROM Membre
                 LEFT JOIN Cotisation ON Membre.id = Cotisation.membre_id 
-                ${JSON.parse(only_paid as any) === true ? "WHERE" : "AND"} Cotisation.mois = '${mois}' AND Cotisation.annee = ${annee}
+                ${only_paid ? "WHERE" : "AND"} ${mois ? `Cotisation.mois = '${mois}' AND` : ''} Cotisation.annee = ${annee}
                 ORDER BY Cotisation.date_paiement ASC;
             `;
         } else {
@@ -235,12 +235,12 @@ baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) =>
     try {
         const annee = _req.query.annee || new Date().getFullYear();
         const mois = getMonthNumber(_req.query.mois as any) || new Date().getMonth() + 1;
-        const for_dette: any = _req.query.for_dette || false;
+        const for_dette = JSON.parse(_req.query.for_dette as any || false);
 
         const query = `
             SELECT *
             FROM Depense 
-            WHERE YEAR(date_creation) = ${annee} AND MONTH(date_creation) = ${mois} ${JSON.parse(for_dette as any) === true ? "AND dette_id IS NOT NULL" : ""}
+            WHERE YEAR(date_creation) = ${annee} AND MONTH(date_creation) = ${mois} ${for_dette ? "AND dette_id IS NOT NULL" : ""}
             ORDER BY date_creation DESC;
         `;
 

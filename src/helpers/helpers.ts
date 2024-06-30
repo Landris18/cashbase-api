@@ -99,7 +99,7 @@ export const hashPassword = (password: string): string => {
     return hashedPassword.toString('hex');
 };
 
-export const getMonthFilter = (): any => {
+export const getFilter = (): any => {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const previousMonth = (currentMonth - 1 + 12) % 12;
