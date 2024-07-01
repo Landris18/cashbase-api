@@ -257,7 +257,7 @@ baseRouter.post("/add_depense", verifyToken, async (req: Request, res: Response)
         /**
          * On procède d'abord au traitement de la dette
         */
-        if (dette_id) {
+        if (Number.isInteger(parseInt(dette_id))) {
             const queryGetDette = `SELECT montant_reste FROM Dette WHERE id = ${dette_id};`;
             const [rows] = await pool.query(queryGetDette) as any;
             if (Array.isArray(rows) && rows.length > 0) {
