@@ -279,13 +279,13 @@ baseRouter.post("/add_depense", verifyToken, async (req: Request, res: Response)
         */
         const query = `
             INSERT INTO Depense(date_creation, montant, raison, dette_id) 
-            VALUES('${dayjs(date_creation).format("YYYY-MM-DD")}', ${montant}, '${raison}', ${dette_id ?? null});
+            VALUES('${dayjs(date_creation).format("YYYY-MM-DD")}', ${montant}, '${raison}', ${Number.isInteger(parseInt(dette_id)) ? parseInt(dette_id) : null});
         `;
         await pool.query(query) as any;
 
         res.status(200).send({ success: "Dépense ajouté avec succès" });
     } catch (_error: any) {
-        res.status(400).send({ error: MESSAGE_400 });
+        res.status(400).send({ error: _error });
     }
 });
 
