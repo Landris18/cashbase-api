@@ -237,6 +237,7 @@ const monthsList = Array.from({ length: 12 }, (_, index) => {
 });
 
 export const getMonthNumber = (monthFrenchString: string): number | null => {
+    if (!monthFrenchString) return null;
     const index: number = monthsList.findIndex(item => item === monthFrenchString);
     return index >= 0 ? index + 1 : null;
 };

@@ -214,10 +214,11 @@ baseRouter.post("/add_cotisations", verifyToken, async (_req: Request, res: Resp
 baseRouter.get("/revenus", verifyToken, async (_req: Request, res: Response) => {
     try {
         const annee = _req.query.annee || new Date().getFullYear();
-        const mois = getMonthNumber(_req.query.mois as any) || new Date().getMonth() + 1;
+        const mois = getMonthNumber(_req.query.mois as any);
 
         const query = `
-            SELECT * FROM Revenu WHERE YEAR(date_creation) = ${annee} AND MONTH(date_creation) = ${mois} ORDER BY date_creation DESC;
+            SELECT * FROM Revenu WHERE YEAR(date_creation) = ${annee} ${mois ? `AND MONTH(date_creation) = ${mois}` : ''}
+            ORDER BY date_creation DESC;
         `;
 
         const [rows] = await pool.query(query);
@@ -234,13 +235,15 @@ baseRouter.get("/revenus", verifyToken, async (_req: Request, res: Response) => 
 baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) => {
     try {
         const annee = _req.query.annee || new Date().getFullYear();
-        const mois = getMonthNumber(_req.query.mois as any) || new Date().getMonth() + 1;
+        const mois = getMonthNumber(_req.query.mois as any);
         const for_dette = JSON.parse(_req.query.for_dette as any || false);
 
         const query = `
             SELECT *
             FROM Depense 
-            WHERE YEAR(date_creation) = ${annee} AND MONTH(date_creation) = ${mois} ${for_dette ? "AND dette_id IS NOT NULL" : ""}
+            WHERE YEAR(date_creation) = ${annee} 
+            ${mois ? `AND MONTH(date_creation) = ${mois}` : ''} 
+            ${for_dette ? "AND dette_id IS NOT NULL" : ""}
             ORDER BY date_creation DESC;
         `;
 
