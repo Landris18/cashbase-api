@@ -237,7 +237,7 @@ baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) =>
     try {
         const annee = _req.query.annee || new Date().getFullYear();
         const mois = getMonthNumber(_req.query.mois as any);
-        const for_dette = JSON.parse(_req.query.for_dette as any || false);
+        const for_dette = _req.query.for_dette === "undefined" ? false : JSON.parse(_req.query.for_dette as any);
 
         const query = `
             SELECT *
