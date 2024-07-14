@@ -6,6 +6,7 @@ import {
     verifyToken, hashPassword, getFilter, getMonthNumber,
     generateToken, fillMissingMonths, addRevenusTotalsAndProfits,
     removeSession, groupCotisationsByMembreId,
+    addMonthKey,
 } from '../helpers/helpers';
 import { addCotisation } from '../controllers/controllers';
 import { v4 as uuidv4 } from 'uuid';
@@ -221,8 +222,8 @@ baseRouter.get("/revenus", verifyToken, async (_req: Request, res: Response) => 
             ORDER BY date_creation DESC;
         `;
 
-        const [rows] = await pool.query(query);
-        res.status(200).send({ success: { revenus: rows } });
+        const [rows] = await pool.query(query) as any;
+        res.status(200).send({ success: { revenus: addMonthKey(rows) } });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }
@@ -248,7 +249,7 @@ baseRouter.get("/depenses", verifyToken, async (_req: Request, res: Response) =>
         `;
 
         const [rows] = await pool.query(query) as any;
-        res.status(200).send({ success: { depenses: rows } });
+        res.status(200).send({ success: { depenses: addMonthKey(rows) } });
     } catch (_error: any) {
         res.status(400).send({ error: MESSAGE_400 });
     }

@@ -281,3 +281,11 @@ export const groupCotisationsByMembreId = (cotisations: any) => {
         }, {})
     }));
 };
+
+export const addMonthKey = (data: any[]) => {
+    return data.map(el => {
+        const date = new Date(el.date_creation);
+        const mois = monthsList[date.getMonth()];
+        return { ...el, mois };
+    });
+};
